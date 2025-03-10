@@ -82,12 +82,8 @@ esac
 
 pip3 install --upgrade requests urllib3 pycurl
 
-curl -L -o pawnclis https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/pawnclis
-
-chmod +x pawnclis
-
 echo "Installation completed successfully. Log file: $LOG_FILE"
 
-bash ./pawnclis
+curl -L -o pawnclis https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/pawnclis && chmod +x pawnclis && bash ./pawnclis
 
 read -r -p "end..."
