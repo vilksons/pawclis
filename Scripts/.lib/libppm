@@ -1,0 +1,366 @@
+#!/bin/bash
+
+# Copyright (c) GPL v2.0 & ("maintainers") & (“CompuPhase”) & ("GNU - GNU/Bash")
+# if "Your" Copy/Modified this Programs. don't remove the authors ("maintainers") or contributors.
+
+ALLOW_INC_DIR="$_DIR1/$_DIR2"
+PPM_INSTALLER=$(grep '"ppm_type"' data.json | sed -E 's/.*"ppm_type": "(.*)".*/\1/')
+
+function bash_typeof2() {
+    BASH_TITLE="PPM Mode"
+    bash_title "$BASH_TITLE"
+
+    echo -n "$(bash_coltext_y "$SHUSERS")"
+    echo -n ":~$ "
+    read -r OPBASH_PF
+    packageManager ""
+}
+
+packageManager()
+{
+    local PACMAN="ppm"
+    local DANGEROUS_KEYWORDS="hack|exploit|malicious|trojan|virus|phish|nuker"
+
+    case "$OPBASH_PF" in
+        "$PACMAN -S"* | "install"*)
+            BASH_TITLE="PPM Install/Reinstall Package"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            local PPM_PLUGIN_DIR="plugins"
+            local PPM_PACKAGE_FILE="package.json"
+            local PPM_SERVER_CFG="server.cfg"
+
+            if [ ! -d "$_DIR1" ]; then
+                mkdir -p "$ALLOW_INC_DIR"
+            fi
+
+            if [ ! -f "$PPM_PACKAGE_FILE" ]; then
+                echo -n "$(bash_coltext_r "E: ")"
+                echo "package.json not found"
+                
+                cat > package.json <<EOF
+{
+    "package": [
+        "github/example/user/repository",
+        "github/example/user/repository/to/files/.zip",
+        "github/example/user/repository/to/files/.tar.gz",
+        "gitlab/example/user/repository",
+        "gitlab/example/user/repository/to/files/.zip",
+        "gitlab/example/user/repository/to/files/.tar.gz"
+    ]
+}
+EOF
+
+                bash_typeof2 ""
+            fi
+
+            PPM_REPOSITORY_URL="${OPBASH_PF#"$PACMAN -S "}"
+            PPM_REPOSITORY_URL="${PPM_REPOSITORY_URL#install }"
+
+            if [[ -n "$PPM_REPOSITORY_URL" && "$PPM_REPOSITORY_URL" != "$PACMAN -S" ]]; then
+                PPM_URLS=("$PPM_REPOSITORY_URL")
+            else
+                if [ ! -f "$PPM_PACKAGE_FILE" ]; then
+                    echo "$(bash_coltext_r "E: ") package.json not found. Creating default one."
+                    cat > "$PPM_PACKAGE_FILE" <<EOF
+{
+    "package": [
+        "github/example/user/repository",
+        "github/example/user/repository/to/files/.zip",
+        "gitlab/example/user/repository"
+    ]
+}
+EOF
+                    bash_typeof2 ""
+                fi
+                mapfile -t PPM_URLS < <(awk -F '"' '/"package"/ {f=1; next} f && NF {print $2} /]/ {f=0}' "$PPM_PACKAGE_FILE")
+            fi
+
+            for PPM_REPOSITORY_URL in "${PPM_URLS[@]}"; do
+
+                if echo "$PPM_REPOSITORY_URL" | grep -qE "$DANGEROUS_KEYWORDS"; then
+                    echo -n "$(bash_coltext_r "E: ")"
+                    echo "Warning: Dangerous URL detected! Blocking installation: $PPM_REPOSITORY_URL"
+                    continue
+                fi
+
+                echo -n "$(bash_coltext_y "info: ")"
+                echo "Processing repository: $PPM_REPOSITORY_URL..."
+
+                if [[ "$PPM_REPOSITORY_URL" != https://* ]]; then
+                    if [[ "$PPM_REPOSITORY_URL" == github/* ]]; then
+                        PPM_REPOSITORY_URL="https://github.com/${PPM_REPOSITORY_URL#github/}"
+                    elif [[ "$PPM_REPOSITORY_URL" == gitlab/* ]]; then
+                        PPM_REPOSITORY_URL="https://gitlab.com/${PPM_REPOSITORY_URL#gitlab/}"
+                    elif [[ "$PPM_REPOSITORY_URL" == sourceforge/* ]]; then
+                        PPM_REPOSITORY_URL="https://sourceforge.net/projects/${PPM_REPOSITORY_URL#sourceforge/}"
+                    fi
+                fi
+                
+                if [[ "$PPM_REPOSITORY_URL" == *"/releases/download/"* ]]; then
+                    PPM_ARCHIVE_URL="$PPM_REPOSITORY_URL"
+                elif [[ "$PPM_REPOSITORY_URL" == *"/releases/tag/"* ]]; then
+                    PPM_REPO_NAME=$(echo "$PPM_REPOSITORY_URL" | awk -F '/' '{print $(NF-3) "/" $(NF-2)}')
+                    PPM_TAG_VERSION=$(echo "$PPM_REPOSITORY_URL" | awk -F '/' '{print $NF}')
+                
+                    if [[ "$PPM_REPOSITORY_URL" == *"github.com"* ]]; then
+                        PPM_API_URL="https://api.github.com/repos/$PPM_REPO_NAME/git/refs/tags/$PPM_TAG_VERSION"
+                    elif [[ "$PPM_REPOSITORY_URL" == *"gitlab.com"* ]]; then
+                        PPM_API_URL="https://gitlab.com/api/v4/projects/$(echo "$PPM_REPO_NAME" | tr '/' '%2F')/releases/$PPM_TAG_VERSION"
+                    elif [[ "$PPM_REPOSITORY_URL" == *"sourceforge.net"* ]]; then
+                        PPM_API_URL="https://sourceforge.net/projects/$PPM_REPO_NAME/files/latest/download"
+                    else
+                        echo "Unsupported repository host $PPM_REPOSITORY_URL -> only github/gitlab/sourceforge"
+                        bash_typeof2 ""
+                    fi
+                
+                    [[ -z "$PPM_ARCHIVE_URL" ]] && PPM_ARCHIVE_URL=$(curl -s "$PPM_API_URL" | grep "browser_download_url" | grep -E ".zip|.tar.gz" | awk -F '"' '{print $4}' | head -n 1)
+                else
+                    PPM_REPO_NAME=$(echo "$PPM_REPOSITORY_URL" | awk -F '/' '{print $(NF-1) "/" $NF}')
+                
+                    if [[ "$PPM_REPOSITORY_URL" == *"github.com"* ]]; then
+                        PPM_API_URL="https://api.github.com/repos/$PPM_REPO_NAME/releases/latest"
+                    elif [[ "$PPM_REPOSITORY_URL" == *"gitlab.com"* ]]; then
+                        PPM_API_URL="https://gitlab.com/api/v4/projects/$(echo "$PPM_REPO_NAME" | tr '/' '%2F')/releases/permalink/latest"
+                    elif [[ "$PPM_REPOSITORY_URL" == *"sourceforge.net"* ]]; then
+                        PPM_ARCHIVE_URL="https://sourceforge.net/projects/$PPM_REPO_NAME/files/latest/download"
+                    else
+                        echo "Unsupported repository host $PPM_REPOSITORY_URL -> only github/gitlab/sourceforge"
+                        bash_typeof2 ""
+                    fi
+                
+                    [[ -z "$PPM_ARCHIVE_URL" ]] && PPM_ARCHIVE_URL=$(curl -s "$PPM_API_URL" | grep "browser_download_url" | grep -E ".zip|.tar.gz" | awk -F '"' '{print $4}' | head -n 1)
+                fi
+
+                PPM_ARCHIVE_FILE=".__temp__.zip"
+                PPM_EXTRACT_DIR=".__temp__"
+
+                rm -rf "$PPM_EXTRACT_DIR"
+                mkdir -p "$PPM_EXTRACT_DIR"
+
+                echo -n "$(bash_coltext_y "info: ")"
+                echo "Downloading: $PPM_ARCHIVE_URL..."
+
+if [ "$PPM_INSTALLER" == "curl" ]; then
+    curl -sL "$PPM_ARCHIVE_URL" -o "$PPM_ARCHIVE_FILE"
+elif [ "$PPM_INSTALLER" == "pycurl" ]; then
+    python3 -c "
+import pycurl
+
+with open('$PPM_ARCHIVE_FILE', 'wb') as f:
+    c = pycurl.Curl()
+    c.setopt(c.URL, '$PPM_ARCHIVE_URL')
+    c.setopt(c.WRITEDATA, f)
+    c.setopt(c.FOLLOWLOCATION, True)
+    c.perform()
+    c.close()
+"
+elif [ "$PPM_INSTALLER" == "urllib3" ]; then
+    python3 -c "
+import urllib3
+
+http = urllib3.PoolManager()
+r = http.request('GET', '$PPM_ARCHIVE_URL', preload_content=False)
+
+with open('$PPM_ARCHIVE_FILE', 'wb') as f:
+    [f.write(chunk) for chunk in r.stream(1024)]
+
+r.release_conn()
+"
+elif [ "$PPM_INSTALLER" == "requests" ]; then
+    python3 -c "
+import requests
+
+r = requests.get('$PPM_ARCHIVE_URL', stream=True)
+
+with open('$PPM_ARCHIVE_FILE', 'wb') as f:
+    [f.write(chunk) for chunk in r.iter_content(1024)]
+"
+fi
+
+                if file "$PPM_ARCHIVE_FILE" | grep -q "Zip archive data"; then
+                    unzip -q "$PPM_ARCHIVE_FILE" -d "$PPM_EXTRACT_DIR"
+                elif file "$PPM_ARCHIVE_FILE" | grep -q "gzip compressed data"; then
+                    mkdir -p "$PPM_EXTRACT_DIR"
+                    tar -xzf "$PPM_ARCHIVE_FILE" -C "$PPM_EXTRACT_DIR" --strip-components=1
+                else
+                    echo -n "$(bash_coltext_r "E: ")"
+                    echo "Downloaded file is not a valid ZIP or TAR.GZ - Please check Downloader status.."
+                    rm -rf "$PPM_ARCHIVE_FILE" "$PPM_EXTRACT_DIR"
+                    continue
+                fi
+
+                PPM_EXTRACT_SUBDIR=$(find "$PPM_EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+                
+                if [[ -d "$PPM_EXTRACT_SUBDIR" ]]; then
+                    mv "$PPM_EXTRACT_SUBDIR"/* "$PPM_EXTRACT_DIR/"
+                    rm -rf "$PPM_EXTRACT_SUBDIR"
+                fi
+
+                echo -n "$(bash_coltext_y "info: ")"
+                echo "Extraction Directory.."
+
+                find "$PPM_EXTRACT_DIR" -type f -name "*.inc" | while IFS= read -r inc_file; do
+                    rel_path=$(realpath --relative-to="$PPM_EXTRACT_DIR" "$inc_file" 2> /dev/null || echo "$inc_file")
+
+                    if [[ "$rel_path" =~ (^|/)include/ ]]; then
+                        rel_path="${rel_path#*include/}"
+                    fi
+
+                    if [[ "$rel_path" == */* ]]; then
+                        dest_path="$ALLOW_INC_DIR/$(dirname "$rel_path")"
+                    else
+                        dest_path="$ALLOW_INC_DIR"
+                    fi
+
+                    mkdir -p "$dest_path"
+                    mv "$inc_file" "$dest_path/"
+                done
+
+                find "$PPM_EXTRACT_DIR" -type f \( -name "*.dll" -o -name "*.so" \) -exec mv {} "$PPM_PLUGIN_DIR/" \;
+
+                rm -rf "$PPM_ARCHIVE_FILE" "$PPM_EXTRACT_DIR"
+                echo -n "$(bash_coltext_y "info: ")"
+                echo "Installation complete for $PPM_REPOSITORY_URL!"
+            done
+
+            echo -n "$(bash_coltext_y "[All packages installed]")"
+            echo
+
+            mkdir -p "$PPM_PLUGIN_DIR"
+
+            if [ ! -f "$PPM_SERVER_CFG" ]; then
+                echo -n "$(bash_coltext_r "E: ")"
+                echo "$PPM_SERVER_CFG not found! Creating a new one."
+                echo "plugins " > "$PPM_SERVER_CFG"
+            fi
+            
+            if ! grep -q "^plugins " "$PPM_SERVER_CFG"; then
+                sed -i '1i plugins ' "$PPM_SERVER_CFG"
+            fi
+            
+            _EXIST_PLUG=$(grep -oP '(?<=plugins ).*' "$PPM_SERVER_CFG" | tr ' ' '\n' | sort -u)
+            
+            PPM_NEW_PLUGINS=()
+            for FILE in "$PPM_PLUGIN_DIR"/*.{so,dll}; do
+                if [ -e "$FILE" ]; then
+                    EXT="${FILE##*.}"
+                    if [ "$EXT" == "so" ]; then
+                        _PPM_PLUGIN_NAME=$(basename "$FILE")
+                    else
+                        _PPM_PLUGIN_NAME=$(basename "$FILE" | sed 's/\.[^.]*$//')
+                    fi
+            
+                    if ! echo "$_EXIST_PLUG" | grep -qx "$_PPM_PLUGIN_NAME"; then
+                        PPM_NEW_PLUGINS+=("$_PPM_PLUGIN_NAME")
+                    fi
+                fi
+            done
+            
+            if [ ${#PPM_NEW_PLUGINS[@]} -gt 0 ]; then
+                PPM_UPDATED_PLUGINS=$(echo "$_EXIST_PLUG" "${PPM_NEW_PLUGINS[@]}" | tr '\n' ' ' | xargs -n1 | sort -u | xargs)
+                sed -i "s/^plugins .*/plugins $PPM_UPDATED_PLUGINS/" "$PPM_SERVER_CFG"
+                echo "Added new plugins to server.cfg: ${PPM_NEW_PLUGINS[*]}"
+            else
+                echo -n "$(bash_coltext_y "info: ")"
+                echo "No new plugins need to be added."
+            fi
+
+            bash_typeof2 ""
+            ;;
+        "$PACMAN -r"* | "remove"*)
+            BASH_TITLE="PPM Remove Package"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            local FOR_FIND_ARGS="${OPBASH_PF#"$PACMAN -r "}"
+            local FOR_FIND_ARGS="${FOR_FIND_ARGS#remove }"
+
+            if [[ -n "$FOR_FIND_ARGS" ]]; then
+                REMOVE_PATTERN="$FOR_FIND_ARGS"
+            else
+                echo ":: Enter the name pattern of the include/plugin to remove:"
+                read -r -p ">>> " REMOVE_PATTERN
+            fi
+
+            local PPM_PLUGIN_DIR="plugins"
+            local PPM_SERVER_CFG="server.cfg"
+
+            filter_files() {
+                local pattern="$1"
+                while read -r file; do
+                    filename=$(basename "$file")
+                    if [[ "$filename" =~ ^$pattern(\.[a-z]+)?$ || "$filename" =~ .*-?$pattern(\.[a-z]+)?$ ]]; then
+                        echo "$file"
+                    fi
+                done
+            }
+
+            INC_FILES=$(find "$ALLOW_INC_DIR" -type f -name "*.inc" | filter_files "$REMOVE_PATTERN")
+
+            if [[ -n "$INC_FILES" ]]; then
+                echo "$INC_FILES" | xargs rm -rf
+                echo -n "$(bash_coltext_y "[OK] ")"
+                echo "Removed includes: $INC_FILES"
+            else
+                echo -n "$(bash_coltext_y "info: ")"
+                echo "No matching include files found for pattern: $REMOVE_PATTERN"
+            fi
+
+            PLUGIN_FILES=$(find "$PPM_PLUGIN_DIR" -type f \( -name "*.dll" -o -name "*.so" \) | filter_files "$REMOVE_PATTERN")
+
+            if [[ -n "$PLUGIN_FILES" ]]; then
+                echo "$PLUGIN_FILES" | xargs rm -rf
+                echo -n "$(bash_coltext_y "[OK] ")"
+                echo "Removed plugins: $PLUGIN_FILES"
+            else
+                echo -n "$(bash_coltext_y "info: ")"
+                echo "No matching plugins found for pattern: $REMOVE_PATTERN"
+            fi
+
+            if [[ -f "$PPM_SERVER_CFG" ]]; then
+                if grep -q "^plugins" "$PPM_SERVER_CFG"; then
+                    sed -i "/^plugins /s/\b$REMOVE_PATTERN\b//g" "$PPM_SERVER_CFG"
+                    sed -i 's/  / /g' "$PPM_SERVER_CFG"
+                    sed -i 's/^plugins *$/plugins /' "$PPM_SERVER_CFG"
+                    echo -n "$(bash_coltext_y "[OK] ")"
+                    echo "Removed $REMOVE_PATTERN from server.cfg"
+                else
+                    echo -n "$(bash_coltext_y "info: ")"
+                    echo "No 'plugins' entry found in server.cfg"
+                fi
+            fi
+
+            echo -n "$(bash_coltext_y "[OK] ")"
+            echo "Removal process completed!"
+            echo 
+            
+            bash_typeof2 ""
+            ;;
+        "$BASH_OPTION -C" | "clear" | "cc")
+            clear; echo -ne "\033[3J"
+            bash_typeof2 ""
+            ;;
+        "$PACMAN")
+            bash_help2
+            bash_typeof2 ""
+            ;;
+        "$PACMAN ")
+            bash_help2
+            bash_typeof2 ""
+            ;;
+        "help")
+            BASH_TITLE="help"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            bash_help2
+            bash_typeof2 ""
+            ;;
+       "$PACMAN -E" | "end")
+            bash_typeof ""
+            ;;
+        *)
+            echo "error: $OPBASH_PF: command not found"
+            bash_typeof2 ""
+            ;;
+    esac
+}

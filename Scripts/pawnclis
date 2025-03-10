@@ -1,0 +1,1289 @@
+#!/bin/bash
+
+# Copyright (c) GPL v2.0 & ("maintainers") & (“CompuPhase”) & ("GNU - GNU/Bash")
+# if "Your" Copy/Modified this Programs. don't remove the authors ("maintainers") or contributors.
+
+if [ ! -f "data.json" ]; then
+    cat > data.json <<EOF
+{
+    "amx_opt": "-d0",
+
+    "ppm_dir": "pawno",
+    "ppm_subdir": "include",
+    "ppm_type": "urllib3",
+
+    "chatbot_token": "",
+    "chatbot_model": "",
+    "chatbot_biodata": "",
+    "chatbot_json_get": ""
+}
+EOF
+fi
+
+AMX_OPT_F=$(grep '"amx_opt"' data.json | sed -E 's/.*"amx_opt": "(.*)".*/\1/')
+
+if [ ! -d ".cache" ]; then
+    mkdir ".cache"
+fi
+
+METADAT_FILE=".cache/compiler.log"
+
+_DIR1=$(awk -F'"' '/"ppm_dir"/ {print $4}' data.json)
+_DIR2=$(awk -F'"' '/"ppm_subdir"/ {print $4}' data.json)
+
+BASH_DIR="$(dirname "$0")"
+BASH_TITLE=""
+BASH_NAME="pawnclis"
+BASH_BUILD="2025-03-10"
+
+VERSION=$BASH_BUILD
+LICENSES="GPL v2.0 Only"
+
+COMPILER_MODE="false"
+COMPILER_PAWNCC=""
+
+TYPEOF_VAR_NOTICE=0
+
+VAR_SERVERS=0
+
+URL_DOWNLOAD="https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/$BASH_NAME"
+
+CHATBOT_TOKEN=$(grep '"chatbot_token"' data.json | sed -E 's/.*"chatbot_token": "(.*)".*/\1/')
+CHATBOT_MODEL=$(grep '"chatbot_model"' data.json | sed -E 's/.*"chatbot_model": "(.*)".*/\1/')
+CHATBOT_BIODATA=$(grep '"chatbot_biodata"' data.json | sed -E 's/.*"chatbot_biodata": "(.*)".*/\1/')
+CHATBOT_JSON_GET=$(grep '"chatbot_json_get"' data.json | sed -E 's/.*"chatbot_json_get": "(.*)".*/\1/')
+
+SHUSERS="$USER@$(hostname 2> /dev/null || echo )"
+
+function bash_title() {
+    echo -ne "\033]0;$1\007"
+}
+
+bash_title "$SHUSERS:~"
+
+COLOR_Y="\e[33m"
+COLOR_G="\e[32m"
+COLOR_R="\e[91m"
+
+function bash_coltext_y() {
+    local color="$COLOR_Y"
+    local text="$1"
+    echo -e "${color}${text}\e[0m"
+}
+
+function bash_coltext_g() {
+    local color="$COLOR_G"
+    local text="$1"
+    echo -e "${color}${text}\e[0m"
+}
+
+function bash_coltext_r() {
+    local color="$COLOR_R"
+    local text="$1"
+    echo -e "${color}${text}\e[0m"
+}
+
+resetVariable() {
+    COMPILER_MODE="false"
+    COMPILER_PAWNCC=""
+    VAR_SERVERS=0
+}
+LINUX=0
+WINDOWS=0
+MACOS=0
+BASH_SERVER=""
+ACCEPT_OS=0
+
+check_os()
+{
+    if [ $ACCEPT_OS != 1 ]; then
+        OS_TYPE=$(uname)
+        
+        if [[ "$OS_TYPE" == "Linux" ]]; then
+            $SUDO . /etc/os-release
+            LINUX=1
+
+            PAWNCCS="pawncc"
+            DISABLE_GNU_NONE="false"
+            BASH_SERVER="samp03svr"
+        fi
+        
+        if [[ "$OS_TYPE" == "Darwin" ]]; then
+            MACOS=1
+
+            PAWNCCS="pawncc"
+            DISABLE_GNU_NONE="false"
+            BASH_SERVER="samp03svr"
+        fi
+
+        if [ -d "/c/Windows/System32" ] || [ -d "/mnt/c/Windows/System32" ] || [ -d "/Windows/System32" ]; then
+            WINDOWS=1
+
+            PAWNCCS="pawncc.exe"
+            DISABLE_GNU_NONE="true"
+            BASH_SERVER="samp-server.exe"
+        fi
+
+        if [ $WINDOWS == 1 ] && [ $LINUX == 1 ] || [ $WINDOWS == 1 ] && [ $MACOS == 1 ] || [ $LINUX == 1 ] && [ $MACOS == 1 ]; then
+            echo "System detected folder Windows & Linux. which one will you choose?"
+            echo
+            read -r -p "Choose OS (Y for Windows, B for Linux, X for macOS): " PERMISSION_NEED_OS
+
+            while true; do
+                case "$PERMISSION_NEED_OS" in
+                    [Yy])
+                        PAWNCCS="pawncc.exe"
+                        DISABLE_GNU_NONE="true"
+                        BASH_SERVER="samp-server.exe"
+
+                        WINDOWS=1
+                        LINUX=0
+                        MACOS=0
+                        break
+                        ;;
+                    [Bb])
+                        PAWNCCS="pawncc"
+                        DISABLE_GNU_NONE="false"
+                        BASH_SERVER="samp03svr"
+
+                        WINDOWS=0
+                        LINUX=1
+                        MACOS=0
+                        break
+                        ;;
+                    [Xx])
+                        PAWNCCS="pawncc"
+                        DISABLE_GNU_NONE="false"
+                        BASH_SERVER="samp03svr"
+
+                        WINDOWS=0
+                        LINUX=0
+                        MACOS=1
+                        break
+                        ;;
+                    *)
+                        echo -n "$(bash_coltext_r "E: ")"
+                        echo "Invalid selection. Please enter the correct option!"
+                        read -r -p "Choose OS (Y for Windows, B for Linux, X for macOS): " PERMISSION_NEED_OS
+                        ;;
+                esac
+            done   
+        fi
+    fi
+}
+
+# shellcheck source=/dev/null
+
+function bash_typeof() {
+    
+    check_os ""
+    
+    if [ ! -d ".lib" ]; then
+        mkdir ".lib"
+    fi
+
+    if [ -f "$BASH_DIR/.lib/libppm" ]; then
+        source "$BASH_DIR/.lib/libppm"
+    else
+        BASH_TITLE="Waiting resource..."
+        bash_title "$BASH_TITLE"
+
+        echo -n "$(bash_coltext_y "info: ")"
+        echo "libppm not found!. Installing.."
+
+        sleep 0.100
+
+        cd "$BASH_DIR/.lib" > /dev/null 2>&1 || echo ""
+
+        curl -L --progress-bar -o "libppm" "https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/.lib/libppm"
+
+        sleep 0.100
+        clear
+        cd "$(dirname "$0")" /dev/null 2>&1 || echo ""
+        ./$BASH_NAME ""
+    fi
+    if [ -f "$BASH_DIR/.lib/libpack" ]; then
+        source "$BASH_DIR/.lib/libpack"
+    else
+        BASH_TITLE="Waiting resource..."
+        bash_title "$BASH_TITLE"
+
+        echo -n "$(bash_coltext_y "info: ")"
+        echo "libpack not found!. Installing.."
+
+        sleep 0.100
+
+        cd "$BASH_DIR/.lib" /dev/null 2>&1 || echo ""
+
+        curl -L --progress-bar -o "libpack" "https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/.lib/libpack"
+
+        sleep 0.100
+        clear
+        cd "$(dirname "$0")" /dev/null 2>&1 || echo ""
+        ./$BASH_NAME ""
+    fi
+
+    if [[ $TYPEOF_VAR_NOTICE != 1 ]]; then
+        TYPEOF_VAR_NOTICE=1
+
+        BASH_TITLE="Press any key to Continue"
+        bash_title "$BASH_TITLE"
+
+        if [ ! -f "$BASH_DIR/$BASH_SERVER" ]; then
+            echo -n "$(bash_coltext_g "W: ")"
+            echo "$BASH_SERVER not found!. You can get this in \`paw -g\`"
+
+            read -r -n 1 -s
+            clear
+        fi
+
+        while IFS= read -r -d '' pawncc; do
+            if [ -f "$pawncc" ]; then
+                COMPILER_PAWNCC="$pawncc"
+                break
+            fi
+        done < <(find "$BASH_DIR" -type f -iname "$PAWNCCS" -print0)
+
+        if [ -z "$COMPILER_PAWNCC" ]; then
+            echo -n "$(bash_coltext_g "W: ")"
+            echo "$PAWNCCS not found!. You can get this in \`paw -p\`"
+
+            read -r -n 1 -s
+            clear
+        fi
+        
+        go_next ""
+        
+        ACCEPT_OS=1
+    else
+        go_next ""
+
+        ACCEPT_OS=1
+    fi
+}
+
+function go_next() {
+    BASH_TITLE="Paw Mode"
+    bash_title "$BASH_TITLE"
+
+    echo -n "$(bash_coltext_y "$SHUSERS")"
+    echo -n ":~$ "
+    read -r OPBASH_F
+
+    bash_Paw ""
+    resetVariable ""
+}
+
+bash_Paw() {
+    local BASH_OPTION="paw"
+
+    case "$OPBASH_F" in
+        "$BASH_OPTION -c"* | "compiles"*)
+            BASH_TITLE="compilator"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            killall -15 "$BASH_SERVER" > /dev/null 2>&1
+            
+            if [[ "$OPBASH_F" =~ ^"$BASH_OPTION -c compiler " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -c compiler "}"
+            elif [[ "$OPBASH_F" =~ ^"$BASH_OPTION -c " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -c "}"
+            else
+                COMPILER_MODE="true"
+                pawnclis_compilers ""
+            fi
+
+            while IFS= read -r -d '' pawncc; do
+                if [ -f "$pawncc" ]; then
+                    COMPILER_PAWNCC="$pawncc"
+                    break
+                fi
+            done < <(find "$BASH_DIR" -type f -iname "$PAWNCCS" -print0)
+
+            if [ -z "$COMPILER_PAWNCC" ]; then
+                echo -n "$(bash_coltext_g "W: ")"
+                echo "$PAWNCCS not found!. You can get this in \`paw -p\`"
+
+                read -r -n 1 -s
+                clear
+                bash_end ""
+            fi
+
+            mapfile -d '' files < <(find "$BASH_DIR" -name "*$FOR_FIND_INPUT*" -type f -print0)
+
+            for file in "${files[@]}"; do
+                if [ -f "$file" ] && [[ "$file" != *.amx ]]; then
+                    bash_title "$file"
+
+                    AMX_O="$(dirname "$file")/$(basename "${file%.*}.amx")"
+
+                    echo -n "$(bash_coltext_y "info: ")"
+                    echo "Processing: $file"
+
+                    "$COMPILER_PAWNCC" -i"$BASH_DIR$BASH_ALLOW_SDIR" "$file" -o"$AMX_O" "$AMX_OPT_F" > "$METADAT_FILE" 2>&1
+                    EXIT_STATUS=$?
+
+                    if [ $EXIT_STATUS -ne 0 ] || grep -q "fatal error" "$METADAT_FILE"; then
+                        echo "Compilation failed with exit code: $EXIT_STATUS"
+                        [ -f "$AMX_O" ] && rm -rf "$AMX_O"
+                    fi
+
+                    bash_cache_compiler ""
+                    sleep 0.100
+                    cat "$METADAT_FILE" > /dev/null 2>&1
+
+                    if [ -s "$AMX_O" ]; then
+                        echo
+                        echo "~ $AMX_O"
+                        if [ "$COMPILER_MODE" == "true" ]; then
+                            BASH_TITLE="compilers"
+                            bash_title "$SHUSERS:~/ $BASH_TITLE"
+                        elif [ "$COMPILER_MODE" == "false" ]; then
+                            BASH_TITLE="compiler - running"
+                            bash_title "$SHUSERS:~/ $BASH_TITLE"
+                        fi
+                        echo "total size : $(stat -c%s "$AMX_O") bytes"
+                        echo
+                    else
+                        if [ "$COMPILER_MODE" == "false" ]; then
+                            bash_end ""
+                        fi
+                    fi
+                fi
+            done
+
+            killall -15 "$BASH_SERVER" > /dev/null 2>&1
+            echo
+            bash_end ""
+            ;;
+        "$BASH_OPTION -r"* | "running"*)
+            BASH_TITLE="running"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            killall -15 "$BASH_SERVER" > /dev/null 2>&1
+
+            if [[ "$OPBASH_F" =~ ^"$BASH_OPTION -r running " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -r running "}"
+            elif [[ "$OPBASH_F" =~ ^"$BASH_OPTION -r " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -r "}"
+            else
+                pawnclis_servers ""
+            fi
+
+            VAR_SERVERS=1
+            withArgs_pawnclis_servers "$FOR_FIND_INPUT"
+
+            bash_end ""
+            ;;
+        "$BASH_OPTION -d"* | "debug"*)
+            BASH_TITLE="debugging a server"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            killall -15 "$BASH_SERVER" > /dev/null 2>&1
+
+            if [[ "$OPBASH_F" =~ ^"$BASH_OPTION -d debug " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -d debug "}"
+            elif [[ "$OPBASH_F" =~ ^"$BASH_OPTION -d " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -d "}"
+            else
+                if [ ! -f "$BASH_DIR/$BASH_SERVER" ]; then
+                    echo -n "$(bash_coltext_r "E: ")"
+                    echo "$BASH_SERVER not found!. You can get this in \`paw -g\`"
+
+                    read -r -n 1 -s
+                    clear
+
+                    bash_typeof ""
+                fi
+                
+                echo -n ":: Enter gamemode name:"
+                echo
+                read -r -p ">>> " FOR_FIND_INPUT
+            fi
+
+            VAR_SERVERS=2
+            withArgs_pawnclis_servers "$FOR_FIND_INPUT"
+
+            bash_end ""
+            ;;
+        "$BASH_OPTION -s" | "stop")
+            BASH_TITLE="stopped a server"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            killall -15 "$BASH_SERVER" > /dev/null 2>&1
+            bash_end ""
+            ;;
+        "$BASH_OPTION -t" | "restart")
+            BASH_TITLE="restart a server"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            if pgrep -x "$BASH_SERVER" > /dev/null; then
+                killall -15 "$BASH_SERVER" > /dev/null 2>&1
+                sleep 2
+                pawnclis_servers ""
+            else
+                echo "error: uptime sa-mp not found."
+            fi
+            ;;
+        "$BASH_OPTION -u" | "crunn")
+            BASH_TITLE="compile & running"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            killall -15 "$BASH_SERVER" > /dev/null 2>&1
+
+            COMPILER_MODE="false"
+
+            echo
+            compilers ""
+            
+            if grep -i "error" "$METADAT_FILE" > /dev/null; then
+                echo
+            else
+                ok_next ""
+            fi
+            ;;
+        "$BASH_OPTION -g" | "gamemode" | "gmodes")
+            BASH_TITLE="download gamemode"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            while true; do
+                echo "Linux/Windows [a/b]"
+                read -r -p ">> " SEL_CO
+                case "$SEL_CO" in
+                    [Aa])
+                        send_samp_linux ""
+                        break
+                        ;;
+                    [Bb])
+                        send_samp_win ""
+                        break
+                        ;;
+                    *)
+                        echo -n "$(bash_coltext_r "E: ")"
+                        echo "Invalid selection. Please enter A or B."
+                        ;;
+                esac
+            done
+
+            bash_end ""
+            ;;
+        "$BASH_OPTION -p" | "pawncc" | "pcc")
+            BASH_TITLE="download pawncc"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            while true; do
+                echo "Linux/Windows [a/b]"
+                read -r -p ">> " SEL_CO
+                case "$SEL_CO" in
+                    [Aa])
+                        send_compilers_linux ""
+                        break
+                        ;;
+                    [Bb])
+                        send_compilers_win ""
+                        break
+                        ;;
+                    *)
+                        echo -n "$(bash_coltext_r "E: ")"
+                        echo "Invalid selection. Please enter A or B."
+                        ;;
+                esac
+            done
+
+            bash_end ""
+            ;;
+        "$BASH_OPTION -C" | "clear" | "cc")
+            clear; echo -ne "\033[3J"
+            bash_typeof ""
+            ;;
+        "$BASH_OPTION -V" | "tasks")
+            BASH_TITLE="vscode tasks"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            if [ -d ".vscode" ]; then
+                rm -rf .vscode
+            fi
+            
+            mkdir ".vscode"
+            cat <<EOF > .vscode/tasks.json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run PawnCLIS",
+      "type": "process",
+      "command": "./$BASH_NAME"
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "detail": "Task to run the PawnCLIS"
+    }
+  ]
+}
+EOF
+            echo "OK? '.vscode/tasks.json'...: [yes]"
+
+            bash_end ""
+            ;;
+        "$BASH_OPTION -F" | "fcheck")
+            BASH_TITLE="folder check"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            bash_check_dir "filterscripts"
+            bash_check_dir "gamemodes"
+            bash_check_dir "scriptfiles"
+
+            if [ -f "server.cfg" ]; then
+                echo
+                echo "# server.cfg is .. Ok .."
+                echo " [A subdirectory or file server.cfg already exists.]"
+
+                bash_end ""
+            else
+                cat <<EOF > server.cfg
+echo Executing Server Config...
+lanmode 0
+rcon_password changename
+maxplayers 150
+port 7777
+hostname SA-MP 0.3
+gamemode0 main 1
+filterscripts
+announce 0
+chatlogging 0
+weburl www.sa-mp.com
+onfoot_rate 40
+incar_rate 40
+weapon_rate 40
+stream_distance 300.0
+stream_rate 1000
+maxnpc 0
+logtimeformat [%H:%M:%S]
+language English
+EOF
+                echo "OK? '$BASH_DIR/server.cfg'...: [yes]"
+                echo
+                cat server.cfg
+
+                echo
+                bash_end ""
+            fi
+            ;;
+        "$BASH_OPTION -v" | "$BASH_OPTION -version" | "$BASH_OPTION --version" | "version")
+            BASH_TITLE="version"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            echo "  PawnCLIS Build: $BASH_BUILD"
+            bash_end ""
+            ;;
+        "$BASH_OPTION -T"* | "cat"*)
+            BASH_TITLE="type files"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            if [[ "$OPBASH_F" =~ ^"cat " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"cat "}"
+            elif [[ "$OPBASH_F" =~ ^"$BASH_OPTION -T " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -T "}"
+            else 
+                echo -n ":: Enter the file name:"
+                read -r -p ">>> " FOR_FIND_INPUT
+            fi
+
+            cat "$FOR_FIND_INPUT"
+            echo
+
+            bash_end ""
+            ;;
+        "$BASH_OPTION -D"* | "dir"*)
+            BASH_TITLE="directory - $BASH_DIR"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            if [[ "$OPBASH_F" =~ ^"$BASH_OPTION -D " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -D "}"
+            else 
+                ls -a
+                bash_end ""
+            fi
+
+            cd "$FOR_FIND_INPUT" > /dev/null 2>&1 && ls -a || echo ":: Can't Change Directory to $FOR_FIND_INPUT"
+            
+            bash_end ""
+            ;;
+        "$BASH_OPTION -K" | "kill")
+            BASH_TITLE="kill"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            clear
+            
+            sleep 0.100
+
+            chmod +x $BASH_NAME
+            bash ./$BASH_NAME
+            ;;
+        "$BASH_OPTION -S" | "sync" | "update")
+            BASH_TITLE="Update PawnCLIS"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            GITHUB_URL="https://api.github.com/repos/vilksons/pawnclis/contents/Version/Build"
+            LATEST_VERSION=$(curl -s "$GITHUB_URL" | grep '"name":' | awk -F'"' '{print $4}' | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' | sort -r | head -n 1)
+
+            if [[ ! "$LATEST_VERSION" == "$BASH_BUILD" ]]; then
+                echo "The latest version is here: $LATEST_VERSION. Your current version: $BASH_BUILD..!."
+            else
+                echo "The version is the latest!."
+                echo 
+                read -r -p ":: Do you want to continue Sync PawnCLIS [y/N] " PERMISSION_NEED_S
+
+                while true; do
+                case "$PERMISSION_NEED_S" in
+                    [Yy])
+                        continue
+                        ;;
+                    *)
+                        bash_typeof ""
+                        esac
+                done
+            fi
+
+            cd "$BASH_DIR/.lib" > /dev/null 2>&1 || echo ""
+
+            curl -L --progress-bar -o "libppm" "https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/.lib/libppm"
+            curl -L --progress-bar -o "libpack" "https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/.lib/libpack"
+
+            sleep 1
+            cd "$(dirname "$0")" > /dev/null 2>&1 || echo ""
+            curl -L --progress-bar -o "$BASH_NAME" "$URL_DOWNLOAD"
+
+            sleep 1
+            clear
+            chmod +x $BASH_NAME
+            bash ./$BASH_NAME
+            ;;
+        "$BASH_OPTION -X"* | "checksums"* | "sums")
+            BASH_TITLE="Checksums"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            local FOR_FIND_ARGS="${OPBASH_F#"$BASH_OPTION -X"}"
+            local FOR_FIND_ARGS="${FOR_FIND_ARGS#checksums}"
+
+            cd "$BASH_DIR" > /dev/null 2>&1 || echo ""
+
+            if [[ -n "$FOR_FIND_ARGS" && "$FOR_FIND_ARGS" != "$OPBASH_F" ]]; then
+                FOR_FIND_INPUT="$FOR_FIND_ARGS"
+            else
+                echo "sha1:"
+                sha1sum "$BASH_NAME"
+                echo "sha256:"
+                sha256sum "$BASH_NAME"
+                echo "md5:"
+                md5sum "$BASH_NAME"
+                bash_end ""
+            fi
+
+            if [[ "$FOR_FIND_INPUT" == "sha1" ]]; then
+                sha1sum "$BASH_NAME"
+            elif [[ "$FOR_FIND_INPUT" == "sha256" ]]; then
+                sha256sum "$BASH_NAME"
+            elif [[ "$FOR_FIND_INPUT" == "md5" ]]; then
+                md5sum "$BASH_NAME"
+            fi
+
+            bash_end ""
+            ;;
+        "$BASH_OPTION -W" | "whoami" | "me" | "user")
+            BASH_TITLE="whoami"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            whoami
+            bash_end ""
+            ;;
+        "$BASH_OPTION -e" | "exit" | "end")
+            BASH_TITLE="exit"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            sleep 0.100
+            bash -
+            ;;
+        "$BASH_OPTION -a"* | "chatbot"* | "ai")
+            BASH_TITLE="chatbot"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            local FOR_FIND_ARGS="${OPBASH_F#"$BASH_OPTION -a "}"
+            local FOR_FIND_ARGS="${FOR_FIND_ARGS#chatbot }"
+
+            if [[ -n "$FOR_FIND_ARGS" && "$FOR_FIND_ARGS" != "$OPBASH_F" ]]; then
+                user_question="$FOR_FIND_ARGS"
+            else
+                echo -n ":: Enter the Question:"
+                echo
+                echo " -> enter \"exit\" to exit"
+                read -r -p ">>> " user_question
+            fi
+
+            if [[ "$user_question" == "exit" ]]; then
+                bash_end ""
+            fi
+
+            echo "*Send..."
+
+            response=$(curl -s -X POST https://api.groq.com/openai/v1/chat/completions \
+                -H "Authorization: Bearer $CHATBOT_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "{
+                    \"model\": \"$CHATBOT_MODEL\",
+                    \"messages\": [
+                        {
+                        \"role\": \"system\",
+                        \"content\": \"$CHATBOT_BIODATA\"
+                        },
+                        {
+                        \"role\": \"user\",
+                        \"content\": \"$user_question\"
+                        }
+                    ],
+                    \"temperature\": 1,
+                    \"max_tokens\": 1024,
+                    \"top_p\": 1,
+                    \"stream\": false,
+                    \"stop\": null
+                    }")
+
+            if [ "$CHATBOT_JSON_GET" == "python3" ]; then
+                echo "$response" | python3 -c "import sys, json; print(json.load(sys.stdin)['choices'][0]['message']['content'])"
+            elif [ "$CHATBOT_JSON_GET" == "sed" ]; then
+                echo "$response" | sed -E 's/.*"content":"([^"]*)".*/\1/' | awk '{gsub(/\\n/, "\n")}1'
+            elif [ "$CHATBOT_JSON_GET" == "jq" ]; then
+                echo "$response" | jq -r '.choices[0].message.content'
+            elif [ "$CHATBOT_JSON_GET" == "grep" ]; then
+                echo "$response" | grep -oP '"content":"\K[^"]*'
+            fi
+            
+            echo "----------------------------------"
+            
+            bash_end ""
+            ;;
+        "$BASH_OPTION -N"* | "nano"*)
+            BASH_TITLE="GNU Nano Editor"
+            bash_title "$BASH_TITLE"
+            
+            local FOR_FIND_ARGS="${OPBASH_F#"$BASH_OPTION -N "}"
+            local FOR_FIND_ARGS="${FOR_FIND_ARGS#nano }"
+
+            if [[ -n "$FOR_FIND_ARGS" && "$FOR_FIND_ARGS" != "$OPBASH_F" ]]; then
+                FILE_PATH="$FOR_FIND_ARGS"
+            else
+                echo ":: Enter the File:"
+                read -r -p ">>> " FILE_PATH
+            fi
+
+            nano "$FILE_PATH"
+            bash_end ""
+            ;;
+        "$BASH_OPTION -O" | "remcac")
+            BASH_TITLE="Remove Cache"
+            bash_title "$BASH_TITLE"
+
+            echo -n "Cache Directory: $BASH_DIR/.cache"
+            echo 
+            read -r -p ":: Do you want to remove ALL files from cache? [Y/N] " PERMISSION_NEED_RC
+
+            while true; do
+            case "$PERMISSION_NEED_RC" in
+                [Yy])
+                    cd "$BASH_DIR" > /dev/null 2>&1 || echo ""
+                    rm -rf "$BASH_DIR/.cache"
+
+                    sleep 1
+
+                    if [ ! -d ".cache" ]; then
+                        mkdir ".cache"
+                    fi
+
+                    sleep 0.100
+                    bash_typeof ""
+                    break
+                    ;;
+                *)
+                    bash_typeof ""
+                    esac
+            done
+            ;;
+        "fetch")
+            GITHUB_URL="https://api.github.com/repos/vilksons/pawnclis/contents/Version/Build"
+            LATEST_VERSION=$(curl -s "$GITHUB_URL" | grep '"name":' | awk -F'"' '{print $4}' | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' | sort -r | head -n 1)
+            
+            echo " _____                      _____ _      _____  _____   "
+            echo " |  __ \                    / ____| |    |_   _|/ ____| "
+            echo " | |__) |_ ___      ___ __ | |    | |      | | | (___   "
+            echo " |  ___/ _' \ \ /\ / / '_ \| |    | |      | |  \___ \  "
+            echo " | |  | (_| |\ V  V /| | | | |____| |____ _| |_ ____) | "
+            echo " |_|   \__,_| \_/\_/ |_| |_|\_____|______|_____|_____/  "
+            echo
+
+            if [[ "$LATEST_VERSION" == "$BASH_BUILD" ]]; then
+                echo "PawnCLIS Version: up-to-date / $VERSION"
+            else
+                echo "PawnCLIS Version: $VERSION"
+            fi
+
+            echo "PawnCLIS Licenses: $LICENSES"
+
+            PLATFORM=""
+            if [ $LINUX == 1 ]; then PLATFORM="Linux"; fi
+            if [ $WINDOWS == 1 ]; then PLATFORM="${PLATFORM:+$PLATFORM & }Windows"; fi
+            if [ $MACOS == 1 ]; then PLATFORM="${PLATFORM:+$PLATFORM & }macOS"; fi
+            
+            if [ -n "$PLATFORM" ]; then
+                echo "PawnCLIS Platform: $PLATFORM"
+            else
+                echo "PawnCLIS Platform: Unknown"
+            fi
+
+            bash_end ""
+            ;;
+        "$BASH_OPTION -M" | "ppm")
+            bash_typeof2 ""
+            bash_help2 ""
+            ;;
+        "help"* | "$BASH_OPTION -h"* | "$BASH_OPTION --h"*)
+            BASH_TITLE="help"
+            bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+            local FOR_FIND_ARGS="${OPBASH_F#"$BASH_OPTION -h "}"
+            local FOR_FIND_ARGS="${FOR_FIND_ARGS#help }"
+            local FOR_FIND_ARGS="${FOR_FIND_ARGS#"$BASH_OPTION --h "}"
+
+            if [[ -n "$FOR_FIND_ARGS" && "$FOR_FIND_ARGS" != "$OPBASH_F" ]]; then
+                if [ "$FOR_FIND_ARGS" == "compiles" ]; then
+                    echo ":: Compile a project"
+                    echo " -> Usage: paw -c | compiles | (+) [<args>] [target]"
+                elif [ "$FOR_FIND_ARGS" == "running" ]; then
+                    echo ":: Running a project"
+                    echo " -> Usage: paw -r | running | (+) [<args>] [target]"
+                elif [ "$FOR_FIND_ARGS" == "debug" ]; then
+                    echo ":: Debug a project"
+                    echo " -> Usage: paw -d | debug | (+) [<args>] [target]"
+                elif [ "$FOR_FIND_ARGS" == "stop" ]; then
+                    echo ":: Stop all Server Uptime"
+                    echo " -> Usage: paw -s | stop"
+                elif [ "$FOR_FIND_ARGS" == "restart" ]; then
+                    echo ":: Restart all Server"
+                    echo " -> Usage: paw -t | restart"
+                elif [ "$FOR_FIND_ARGS" == "crunn" ]; then
+                    echo ":: Compile & Running a project"
+                    echo " -> Usage: paw -u | crunn"
+                elif [ "$FOR_FIND_ARGS" == "gamemodes" ]; then
+                    echo ":: Download GameModes SA-MP with Selection"
+                    echo " -> Usage: paw -g | gamemodes | gmodes"
+                elif [ "$FOR_FIND_ARGS" == "pawncc" ]; then
+                    echo ":: Download PawnCC SA-MP with Selection"
+                    echo " -> Usage: paw -p | pawncc | pcc"
+                elif [ "$FOR_FIND_ARGS" == "clear" ]; then
+                    echo ":: Clear Screen Terminal"
+                    echo " -> Usage: paw -C | clear | cc"
+                elif [ "$FOR_FIND_ARGS" == "checksums" ]; then
+                    echo ":: Checksums of PawnCLIS"
+                    echo " -> Usage: paw -X | checksums | sums | (+) [<args>] \"sha1\" \"sha256\" \"md5\" default=ALL"
+                elif [ "$FOR_FIND_ARGS" == "fcheck" ]; then
+                    echo ":: Checks Directory of SA-MP"
+                    echo " -> Usage: paw -F | fcheck"
+                elif [ "$FOR_FIND_ARGS" == "tasks" ]; then
+                    echo ":: Generate VSCode Tasks"
+                    echo " -> Usage: paw -V | tasks"
+                elif [ "$FOR_FIND_ARGS" == "cat" ]; then
+                    echo ":: Display a files to PawnCLIS Terminal"
+                    echo " -> Usage: paw -T | cat"
+                elif [ "$FOR_FIND_ARGS" == "whoami" ]; then
+                    echo ":: Display Whoami"
+                    echo " -> Usage: paw -W | whoami | me | user"
+                elif [ "$FOR_FIND_ARGS" == "kill" ]; then
+                    echo ":: Kill a PawnCLIS Terminal"
+                    echo " -> Usage: paw -K | kill"
+                elif [ "$FOR_FIND_ARGS" == "directory" ]; then
+                    echo ":: Change Terminal Directory (OP.1) or Display Terminal list files/dir (OP.2)"
+                    echo " -> Usage: paw -D (OP.1) | directory - dir (OP.2)"
+                elif [ "$FOR_FIND_ARGS" == "version" ]; then
+                    echo ":: Display a PawnCLIS Version (Build Date)"
+                    echo " -> Usage: paw -v | version"
+                elif [ "$FOR_FIND_ARGS" == "update" ]; then
+                    echo ":: Update/Upgrade/Sync PawnCLIS Shell up-to-date"
+                    echo " -> Usage: paw -S | update | sync"
+                elif [ "$FOR_FIND_ARGS" == "exit" ]; then
+                    echo ":: Exit/End PawnCLIS Terminal"
+                    echo " -> Usage: paw -e | exit | end"
+                elif [ "$FOR_FIND_ARGS" == "remcac" ]; then
+                    echo ":: Remove cache \".cache\" PawnCLIS"
+                    echo " -> Usage: paw -O | remcac"
+                elif [ "$FOR_FIND_ARGS" == "chatbot" ]; then
+                    echo ":: Chatbot Terminal"
+                    echo " -> Usage: paw -a | chatbot | ai | (+) [<args>] [question]"
+                elif [ "$FOR_FIND_ARGS" == "nano" ]; then
+                    if [ "$DISABLE_GNU_NONE" == "true" ]; then
+                        bash_help "invalid"
+                    else
+                        echo ":: GNU/Nano Editor"
+                        echo " -> Usage: paw -N | nano"
+                    fi
+                elif [ "$FOR_FIND_ARGS" == "ppm" ]; then
+                    echo ":: PawnCLIS Paw Mode to PPM Mode"
+                    echo " -> Usage: paw -M | ppm"
+                elif [ "$FOR_FIND_ARGS" == "fetch" ]; then
+                    echo ":: Fetch PawnCLIS"
+                    echo " -> Usage: fetch"
+                else
+                    bash_help "invalid"
+                fi
+            else
+                bash_help ""
+            fi
+
+            bash_typeof ""
+            ;;
+        "$BASH_OPTION")
+            bash_help ""
+            bash_typeof ""
+            ;;
+        "")
+            bash_typeof ""
+            ;;
+        " ")
+            bash_typeof ""
+            ;;
+        *)
+            echo "error: $OPBASH_F: command not found"
+            bash_typeof ""
+            ;;
+    esac
+}
+
+function bash_help()
+{
+    local check_param=$1
+
+    if [ "$check_param" == "invalid" ]; then
+        echo "Invalid!.. Please Use:"
+    fi
+
+    echo "Usage: paw <command> | help | -h | --h | [<commands>]"
+    echo "Commands:"
+    echo " compiles, running, debug, stop, restart"
+    echo " crunn, gamemodes, pawncc, clear, checksums"
+    echo " fcheck, tasks, cat, whoami, kill, directory, version"
+
+    if [ "$DISABLE_GNU_NONE" == "true" ]; then
+        echo " update, exit, remcac, chatbot, ppm, fetch"
+    else
+        echo " update, exit, remcac, chatbot, nano, ppm, fetch"
+    fi
+}
+
+function bash_help2()
+{
+    echo "Usage: paw <command> [<args>]"
+    echo "Commands:"
+    echo " -S/install - Install/Reinstall Packages"
+    echo " -r/remove  - Remove Packages"
+    echo " -E/end     - End PPM Mode"
+}
+
+function bash_end() {
+    echo -n "$(bash_coltext_y "# Press any key to return.")"
+    echo
+    read -r -n 1 -s
+    bash_typeof ""
+}
+
+function pawnclis_servers() {
+    if [ ! -f "$BASH_DIR/$BASH_SERVER" ]; then
+        echo -n "$(bash_coltext_r "E: ")"
+        echo "$BASH_SERVER not found!. You can get this in \`paw -g\`"
+
+        read -r -n 1 -s
+        clear
+
+        bash_typeof ""
+    fi
+
+    if [ -f "$BASH_DIR/server_log.txt" ]; then
+        rm -rf "$BASH_DIR/server_log.txt"
+    fi
+
+    cd "$BASH_DIR" || echo
+
+    chmod 777 "$BASH_SERVER"
+    ./"$BASH_SERVER" &
+    sleep 2
+    if ! pgrep -x "$BASH_SERVER" > /dev/null; then
+        BASH_TITLE="running - failed"
+        bash_title "$SHUSERS:~/ $BASH_TITLE"
+
+        echo
+        echo -n "$(bash_coltext_r "# Fail")"
+        echo
+        if [ -f "server_log.txt" ]; then
+            sleep 2
+            cat server_log.txt
+            echo
+        else
+            echo "# server_log.txt not found."
+        fi
+
+        echo -n "$(bash_coltext_y "# End.")"
+        echo
+        bash_typeof ""
+    else
+        echo
+        echo -n "$(bash_coltext_y "# Success")"
+        echo
+
+        sleep 2
+        if grep -i "error" server_log.txt > /dev/null; then
+            start_true ""
+        else
+            start_false ""
+        fi
+    fi
+}
+
+function withArgs_pawnclis_servers() {
+    local FOR_FIND_INPUT=$1
+    if [ ! -f "server.cfg" ]; then
+        echo "server.cfg not found!"
+        bash_end ""
+    fi
+
+    mv server.cfg server.cfg.bak
+
+    awk -v new_gamemode="$FOR_FIND_INPUT" '
+    /^gamemode0 / {$2=new_gamemode} 1' server.cfg.bak > server.cfg
+
+    echo "New server.cfg created with gamemode: $FOR_FIND_INPUT"
+
+    if [ ! -f "$BASH_DIR/$BASH_SERVER" ]; then
+        echo -n "$(bash_coltext_r "E: ")"
+        echo "$BASH_SERVER not found!. You can get this in \`paw -g\`"
+
+        read -r -n 1 -s
+        clear
+
+        bash_typeof ""
+    else
+        chmod 777 "$BASH_SERVER"
+        ./"$BASH_SERVER" &
+        sleep 1
+        cat server_log.txt
+        echo
+
+        if [ $VAR_SERVERS == 2 ]; then
+            killall -15 "$BASH_SERVER" > /dev/null 2>&1
+        fi
+    fi
+
+    rm -f server.cfg
+    mv server.cfg.bak server.cfg
+    echo "Original server.cfg has been restored."
+}
+
+function pawnclis_compilers() {
+    SHFILE="false"
+
+    while IFS= read -r -d '' pawncc; do
+        if [ -f "$pawncc" ]; then
+            COMPILER_PAWNCC="$pawncc"
+            break
+        fi
+    done < <(find "$BASH_DIR" -type f -iname "$PAWNCCS" -print0)
+
+    if [ -z "$COMPILER_PAWNCC" ]; then
+        echo -n "$(bash_coltext_g "W: ")"
+        echo "$PAWNCCS not found!. You can get this in \`paw -p\`"
+
+        read -r -n 1 -s
+        clear
+        bash_end ""
+    fi
+
+    mapfile -d '' files < <(find "$BASH_DIR" -name "*.io*" -type f -print0)
+
+    for file in "${files[@]}"; do
+        if [ -f "$file" ] && [[ "$file" != *.amx ]]; then
+            SHFILE="true"
+            bash_title "$file"
+
+            AMX_O="$(dirname "$file")/$(basename "${file%.io*}.amx")"
+
+            echo -n "$(bash_coltext_y "info: ")"
+            echo "Processing: $file"
+
+            "$COMPILER_PAWNCC" -i"$BASH_DIR$BASH_ALLOW_SDIR" "$file" -o"$AMX_O" "$AMX_OPT_F" > "$METADAT_FILE" 2>&1
+            EXIT_STATUS=$?
+
+            if [ $EXIT_STATUS -ne 0 ] || grep -q "fatal error" "$METADAT_FILE"; then
+                echo "Compilation failed with exit code: $EXIT_STATUS"
+                [ -f "$AMX_O" ] && rm -rf "$AMX_O"
+            fi
+
+            bash_cache_compiler ""
+            sleep 0.100
+            cat "$METADAT_FILE"
+
+            if [ -s "$AMX_O" ]; then
+                echo
+                echo "~ $AMX_O"
+                if [ "$COMPILER_MODE" == "true" ]; then
+                    BASH_TITLE="compilers"
+                    bash_title "$SHUSERS:~/ $BASH_TITLE"
+                elif [ "$COMPILER_MODE" == "false" ]; then
+                    BASH_TITLE="compiler - running"
+                    bash_title "$SHUSERS:~/ $BASH_TITLE"
+                fi
+                echo "total size : $(stat -c%s "$AMX_O") bytes"
+                echo
+            else
+                if [ "$COMPILER_MODE" == "false" ]; then
+                    bash_end ""
+                fi
+            fi
+        fi
+    done
+
+    if [ "$SHFILE" == "false" ]; then
+        echo -n "$(bash_coltext_r "..io not found!")"
+        echo
+        bash_end ""
+    fi
+    if [ "$COMPILER_MODE" == "true" ]; then
+        bash_end ""
+    elif [ "$COMPILER_MODE" == "false" ]; then
+        ok_next ""
+    fi
+}
+
+function bash_cache_compiler() {
+    cache_compiler=".cache/compiler.log"
+    _cache_compiler=".cache/.compiler.log"
+    if [ -f "$_cache_compiler" ]; then
+        rm -rf "$_cache_compiler"
+    fi
+    while IFS= read -r line; do
+        echo "~" >> "$_cache_compiler"
+        echo "$line" >> "$_cache_compiler"
+    done < "$cache_compiler"
+    mv "$_cache_compiler" "$cache_compiler" > /dev/null
+}
+
+function bash_check_dir() {
+    local folder=$1
+    if [ -d "$folder" ]; then
+        echo
+        echo "# $folder is .. Ok .."
+        echo " [A subdirectory or file $folder already exists.]"
+        echo "-"
+
+        sleep 0.100
+
+        return
+    else
+        mkdir -p "$folder"
+        echo ":: Create? '$BASH_DIR/$folder'...: [yes]"
+        
+        sleep 0.200
+
+        if [ "$folder" == "gamemodes" ]; then
+            cat <<EOF > gamemodes/main.io.pwn
+#include <a_samp>
+
+main() {
+    print("Hello, World!");
+}
+EOF
+        fi
+
+        return
+    fi
+}
+
+check2() {
+    if grep -i "failed" server_log.txt > /dev/null; then
+        start_true2 ""
+    else
+        start_false2 ""
+    fi
+}
+
+check3() {
+    if grep -i "invalid" server_log.txt > /dev/null; then
+        start_true3 ""
+    else
+        start_false3 ""
+    fi
+}
+
+start_true() {
+    echo -n "$(bash_coltext_r "~")"
+    echo "    ; \"error\"   .. Yes .. True"
+    error_cache ""
+}
+
+start_false() {
+    echo -n "$(bash_coltext_y "~")"
+    echo "    ; \"error\"   .. No .. False"
+    check2 ""
+}
+
+start_true2() {
+    echo -n "$(bash_coltext_r "~")"
+    echo "    ; \"failed\"  .. Yes .. True"
+    failed_cache ""
+}
+
+start_false2() {
+    echo -n "$(bash_coltext_y "~")"
+    echo "    ; \"failed\"  .. No .. False"
+    check3 ""
+}
+
+start_true3() {
+    echo -n "$(bash_coltext_r "~")"
+    echo "    ; \"invalid\" .. Yes .. True"
+    invalid_cache ""
+}
+
+start_false3() {
+    echo -n "$(bash_coltext_y "~")"
+    echo "    ; \"invalid\" .. No .. False"
+    echo
+    bash_end ""
+}
+
+error_cache() {
+    echo
+    grep -i "error" server_log.txt
+    echo
+    check2 ""
+}
+
+failed_cache() {
+    echo
+    grep -i "failed" server_log.txt
+    echo
+    check3 ""
+}
+
+invalid_cache() {
+    echo
+    grep -i "invalid" server_log.txt
+    echo
+    bash_end ""
+}
+
+ok_next() {
+    echo -n "$(bash_coltext_y "Press any key to running.")"
+    echo
+    read -r -n 1 -s
+    pawnclis_servers ""
+}
+
+bash_typeof ""
