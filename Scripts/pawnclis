@@ -88,6 +88,7 @@ resetVariable() {
     COMPILER_PAWNCC=""
     VAR_SERVERS=0
 }
+
 LINUX=0
 WINDOWS=0
 MACOS=0
@@ -275,19 +276,19 @@ function go_next() {
 }
 
 bash_Paw() {
-    local BASH_OPTION="paw"
+    local PAW_TRIGGER="paw"
 
     case "$OPBASH_F" in
-        "$BASH_OPTION -c"* | "compiles"*)
+        "$PAW_TRIGGER -c"* | "compiles"*)
             BASH_TITLE="compilator"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
             killall -15 "$BASH_SERVER" > /dev/null 2>&1
             
-            if [[ "$OPBASH_F" =~ ^"$BASH_OPTION -c compiler " ]]; then
-                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -c compiler "}"
-            elif [[ "$OPBASH_F" =~ ^"$BASH_OPTION -c " ]]; then
-                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -c "}"
+            if [[ "$OPBASH_F" =~ ^"$PAW_TRIGGER -c compiler " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$PAW_TRIGGER -c compiler "}"
+            elif [[ "$OPBASH_F" =~ ^"$PAW_TRIGGER -c " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$PAW_TRIGGER -c "}"
             else
                 COMPILER_MODE="true"
                 pawnclis_compilers ""
@@ -305,8 +306,7 @@ bash_Paw() {
                 echo "$PAWNCCS not found!. You can get this in \`paw -p\`"
 
                 read -r -n 1 -s
-                clear
-                bash_end ""
+                bash_typeof ""
             fi
 
             mapfile -d '' files < <(find "$BASH_DIR" -name "*$FOR_FIND_INPUT*" -type f -print0)
@@ -356,16 +356,16 @@ bash_Paw() {
             echo
             bash_end ""
             ;;
-        "$BASH_OPTION -r"* | "running"*)
+        "$PAW_TRIGGER -r"* | "running"*)
             BASH_TITLE="running"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
             killall -15 "$BASH_SERVER" > /dev/null 2>&1
 
-            if [[ "$OPBASH_F" =~ ^"$BASH_OPTION -r running " ]]; then
-                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -r running "}"
-            elif [[ "$OPBASH_F" =~ ^"$BASH_OPTION -r " ]]; then
-                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -r "}"
+            if [[ "$OPBASH_F" =~ ^"$PAW_TRIGGER -r running " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$PAW_TRIGGER -r running "}"
+            elif [[ "$OPBASH_F" =~ ^"$PAW_TRIGGER -r " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$PAW_TRIGGER -r "}"
             else
                 pawnclis_servers ""
             fi
@@ -375,24 +375,22 @@ bash_Paw() {
 
             bash_end ""
             ;;
-        "$BASH_OPTION -d"* | "debug"*)
+        "$PAW_TRIGGER -d"* | "debug"*)
             BASH_TITLE="debugging a server"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
             killall -15 "$BASH_SERVER" > /dev/null 2>&1
 
-            if [[ "$OPBASH_F" =~ ^"$BASH_OPTION -d debug " ]]; then
-                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -d debug "}"
-            elif [[ "$OPBASH_F" =~ ^"$BASH_OPTION -d " ]]; then
-                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -d "}"
+            if [[ "$OPBASH_F" =~ ^"$PAW_TRIGGER -d debug " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$PAW_TRIGGER -d debug "}"
+            elif [[ "$OPBASH_F" =~ ^"$PAW_TRIGGER -d " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$PAW_TRIGGER -d "}"
             else
                 if [ ! -f "$BASH_DIR/$BASH_SERVER" ]; then
                     echo -n "$(bash_coltext_r "E: ")"
                     echo "$BASH_SERVER not found!. You can get this in \`paw -g\`"
 
                     read -r -n 1 -s
-                    clear
-
                     bash_typeof ""
                 fi
                 
@@ -406,14 +404,14 @@ bash_Paw() {
 
             bash_end ""
             ;;
-        "$BASH_OPTION -s" | "stop")
+        "$PAW_TRIGGER -s" | "stop")
             BASH_TITLE="stopped a server"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
             killall -15 "$BASH_SERVER" > /dev/null 2>&1
             bash_end ""
             ;;
-        "$BASH_OPTION -t" | "restart")
+        "$PAW_TRIGGER -t" | "restart")
             BASH_TITLE="restart a server"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
@@ -422,10 +420,10 @@ bash_Paw() {
                 sleep 2
                 pawnclis_servers ""
             else
-                echo "error: uptime sa-mp not found."
+                echo "error: No progress Server running."
             fi
             ;;
-        "$BASH_OPTION -u" | "crunn")
+        "$PAW_TRIGGER -u" | "crunn")
             BASH_TITLE="compile & running"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
@@ -442,7 +440,7 @@ bash_Paw() {
                 ok_next ""
             fi
             ;;
-        "$BASH_OPTION -g" | "gamemode" | "gmodes")
+        "$PAW_TRIGGER -g" | "gamemode" | "gmodes")
             BASH_TITLE="download gamemode"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
@@ -467,7 +465,7 @@ bash_Paw() {
 
             bash_end ""
             ;;
-        "$BASH_OPTION -p" | "pawncc" | "pcc")
+        "$PAW_TRIGGER -p" | "pawncc" | "pcc")
             BASH_TITLE="download pawncc"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
@@ -492,11 +490,11 @@ bash_Paw() {
 
             bash_end ""
             ;;
-        "$BASH_OPTION -C" | "clear" | "cc")
+        "$PAW_TRIGGER -C" | "clear" | "cc")
             clear; echo -ne "\033[3J"
             bash_typeof ""
             ;;
-        "$BASH_OPTION -V" | "tasks")
+        "$PAW_TRIGGER -V" | "tasks")
             BASH_TITLE="vscode tasks"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
@@ -527,7 +525,7 @@ EOF
 
             bash_end ""
             ;;
-        "$BASH_OPTION -F" | "fcheck")
+        "$PAW_TRIGGER -F" | "fcheck")
             BASH_TITLE="folder check"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
@@ -571,21 +569,21 @@ EOF
                 bash_end ""
             fi
             ;;
-        "$BASH_OPTION -v" | "$BASH_OPTION -version" | "$BASH_OPTION --version" | "version")
+        "$PAW_TRIGGER -v" | "$PAW_TRIGGER -version" | "$PAW_TRIGGER --version" | "version")
             BASH_TITLE="version"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
             echo "  PawnCLIS Build: $BASH_BUILD"
             bash_end ""
             ;;
-        "$BASH_OPTION -T"* | "cat"*)
+        "$PAW_TRIGGER -T"* | "cat"*)
             BASH_TITLE="type files"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
             if [[ "$OPBASH_F" =~ ^"cat " ]]; then
                 FOR_FIND_INPUT="${OPBASH_F#"cat "}"
-            elif [[ "$OPBASH_F" =~ ^"$BASH_OPTION -T " ]]; then
-                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -T "}"
+            elif [[ "$OPBASH_F" =~ ^"$PAW_TRIGGER -T " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$PAW_TRIGGER -T "}"
             else 
                 echo -n ":: Enter the file name:"
                 read -r -p ">>> " FOR_FIND_INPUT
@@ -596,12 +594,12 @@ EOF
 
             bash_end ""
             ;;
-        "$BASH_OPTION -D"* | "dir"*)
+        "$PAW_TRIGGER -D"* | "dir"*)
             BASH_TITLE="directory - $BASH_DIR"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
-            if [[ "$OPBASH_F" =~ ^"$BASH_OPTION -D " ]]; then
-                FOR_FIND_INPUT="${OPBASH_F#"$BASH_OPTION -D "}"
+            if [[ "$OPBASH_F" =~ ^"$PAW_TRIGGER -D " ]]; then
+                FOR_FIND_INPUT="${OPBASH_F#"$PAW_TRIGGER -D "}"
             else 
                 ls -a
                 bash_end ""
@@ -611,7 +609,7 @@ EOF
             
             bash_end ""
             ;;
-        "$BASH_OPTION -K" | "kill")
+        "$PAW_TRIGGER -K" | "kill")
             BASH_TITLE="kill"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
@@ -622,7 +620,7 @@ EOF
             chmod +x $BASH_NAME
             bash ./$BASH_NAME
             ;;
-        "$BASH_OPTION -S" | "sync" | "update")
+        "$PAW_TRIGGER -S" | "sync" | "update")
             BASH_TITLE="Update PawnCLIS"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
@@ -661,11 +659,11 @@ EOF
             chmod +x $BASH_NAME
             bash ./$BASH_NAME
             ;;
-        "$BASH_OPTION -X"* | "checksums"* | "sums")
+        "$PAW_TRIGGER -X"* | "checksums"* | "sums")
             BASH_TITLE="Checksums"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
-            local FOR_FIND_ARGS="${OPBASH_F#"$BASH_OPTION -X"}"
+            local FOR_FIND_ARGS="${OPBASH_F#"$PAW_TRIGGER -X"}"
             local FOR_FIND_ARGS="${FOR_FIND_ARGS#checksums}"
 
             cd "$BASH_DIR" > /dev/null 2>&1 || echo ""
@@ -692,25 +690,25 @@ EOF
 
             bash_end ""
             ;;
-        "$BASH_OPTION -W" | "whoami" | "me" | "user")
+        "$PAW_TRIGGER -W" | "whoami" | "me" | "user")
             BASH_TITLE="whoami"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
             whoami
             bash_end ""
             ;;
-        "$BASH_OPTION -e" | "exit" | "end")
+        "$PAW_TRIGGER -e" | "exit" | "end")
             BASH_TITLE="exit"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
             sleep 0.100
             bash -
             ;;
-        "$BASH_OPTION -a"* | "chatbot"* | "ai")
+        "$PAW_TRIGGER -a"* | "chatbot"* | "ai")
             BASH_TITLE="chatbot"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
-            local FOR_FIND_ARGS="${OPBASH_F#"$BASH_OPTION -a "}"
+            local FOR_FIND_ARGS="${OPBASH_F#"$PAW_TRIGGER -a "}"
             local FOR_FIND_ARGS="${FOR_FIND_ARGS#chatbot }"
 
             if [[ -n "$FOR_FIND_ARGS" && "$FOR_FIND_ARGS" != "$OPBASH_F" ]]; then
@@ -764,11 +762,11 @@ EOF
             
             bash_end ""
             ;;
-        "$BASH_OPTION -N"* | "nano"*)
+        "$PAW_TRIGGER -N"* | "nano"*)
             BASH_TITLE="GNU Nano Editor"
             bash_title "$BASH_TITLE"
             
-            local FOR_FIND_ARGS="${OPBASH_F#"$BASH_OPTION -N "}"
+            local FOR_FIND_ARGS="${OPBASH_F#"$PAW_TRIGGER -N "}"
             local FOR_FIND_ARGS="${FOR_FIND_ARGS#nano }"
 
             if [[ -n "$FOR_FIND_ARGS" && "$FOR_FIND_ARGS" != "$OPBASH_F" ]]; then
@@ -781,7 +779,7 @@ EOF
             nano "$FILE_PATH"
             bash_end ""
             ;;
-        "$BASH_OPTION -O" | "remcac")
+        "$PAW_TRIGGER -O" | "remcac")
             BASH_TITLE="Remove Cache"
             bash_title "$BASH_TITLE"
 
@@ -843,17 +841,17 @@ EOF
 
             bash_end ""
             ;;
-        "$BASH_OPTION -M" | "ppm")
+        "$PAW_TRIGGER -M" | "ppm")
             bash_typeof2 ""
             bash_help2 ""
             ;;
-        "help"* | "$BASH_OPTION -h"* | "$BASH_OPTION --h"*)
+        "help"* | "$PAW_TRIGGER -h"* | "$PAW_TRIGGER --h"*)
             BASH_TITLE="help"
             bash_title "$SHUSERS:~/ $BASH_TITLE"
 
-            local FOR_FIND_ARGS="${OPBASH_F#"$BASH_OPTION -h "}"
+            local FOR_FIND_ARGS="${OPBASH_F#"$PAW_TRIGGER -h "}"
             local FOR_FIND_ARGS="${FOR_FIND_ARGS#help }"
-            local FOR_FIND_ARGS="${FOR_FIND_ARGS#"$BASH_OPTION --h "}"
+            local FOR_FIND_ARGS="${FOR_FIND_ARGS#"$PAW_TRIGGER --h "}"
 
             if [[ -n "$FOR_FIND_ARGS" && "$FOR_FIND_ARGS" != "$OPBASH_F" ]]; then
                 if [ "$FOR_FIND_ARGS" == "compiles" ]; then
@@ -866,7 +864,7 @@ EOF
                     echo ":: Debug a project"
                     echo " -> Usage: paw -d | debug | (+) [<args>] [target]"
                 elif [ "$FOR_FIND_ARGS" == "stop" ]; then
-                    echo ":: Stop all Server Uptime"
+                    echo ":: stop all running server progress"
                     echo " -> Usage: paw -s | stop"
                 elif [ "$FOR_FIND_ARGS" == "restart" ]; then
                     echo ":: Restart all Server"
@@ -941,7 +939,7 @@ EOF
 
             bash_typeof ""
             ;;
-        "$BASH_OPTION")
+        "$PAW_TRIGGER")
             bash_help ""
             bash_typeof ""
             ;;
@@ -1001,8 +999,6 @@ function pawnclis_servers() {
         echo "$BASH_SERVER not found!. You can get this in \`paw -g\`"
 
         read -r -n 1 -s
-        clear
-
         bash_typeof ""
     fi
 
@@ -1066,8 +1062,6 @@ function withArgs_pawnclis_servers() {
         echo "$BASH_SERVER not found!. You can get this in \`paw -g\`"
 
         read -r -n 1 -s
-        clear
-
         bash_typeof ""
     else
         chmod 777 "$BASH_SERVER"
@@ -1101,7 +1095,6 @@ function pawnclis_compilers() {
         echo "$PAWNCCS not found!. You can get this in \`paw -p\`"
 
         read -r -n 1 -s
-        clear
         bash_end ""
     fi
 
