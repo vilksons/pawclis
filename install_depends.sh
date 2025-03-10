@@ -48,31 +48,31 @@ fi
 case "$OS" in
     debian|ubuntu|ubuntu_kylin|elementary|devuan|kali|trisquel|pop|deepin|steamos|zorin|linuxmint)
         $SUDO dpkg --add-architecture i386
-        $SUDO apt install -y curl python3 python3-pip "$LIB_STD":i386
+        $SUDO apt install -y curl python3 python3-pip unzip tar "$LIB_STD":i386
         ;;
     arch|arch32|blackarch|arcolinux|archcraft|garuda|manjaro)
-        $SUDO pacman -S --noconfirm curl python python-pip "$LIB_GLIBC"
+        $SUDO pacman -S --noconfirm curl python python-pip unzip tar "$LIB_GLIBC" lib32-gcc-libs
         ;;
     opensuse*|suse*)
-        $SUDO zypper refresh && $SUDO zypper install -y curl python3 python3-pip "$LIB_STD"
+        $SUDO zypper refresh && $SUDO zypper install -y curl python3 python3-pip unzip tar "$LIB_STD"
         ;;
     rhel|centos|centos_stream|fedora|rocky|almalinux)
-        $SUDO dnf install -y curl python3 python3-pip "$LIB_STD"
+        $SUDO dnf install -y curl python3 python3-pip unzip tar "$LIB_STD"
         ;;
     alpine)
-        $SUDO apk update && $SUDO apk add curl python3 py3-pip "$LIB_STD"
+        $SUDO apk update && $SUDO apk add curl python3 py3-pip unzip tar "$LIB_STD"
         ;;
     gentoo)
-        $SUDO emerge --sync && $SUDO emerge --ask dev-lang/python net-misc/curl sys-libs/glibc
+        $SUDO emerge --sync && $SUDO emerge --ask dev-lang/python net-misc/curl sys-libs/glibc app-arch/unzip app-arch/tar
         ;;
     void)
-        $SUDO xbps-install -Sy curl python3 python3-pip "$LIB_STD"
+        $SUDO xbps-install -Sy curl python3 python3-pip unzip tar "$LIB_STD"
         ;;
     slackware)
-        $SUDO slackpkg update && $SUDO slackpkg install curl python3 pip "$LIB_STD"
+        $SUDO slackpkg update && $SUDO slackpkg install curl python3 pip unzip tar "$LIB_STD"
         ;;
     nixos)
-        $SUDO nix-env -iA nixpkgs.curl nixpkgs.python3 nixpkgs.python3Packages.pip nixpkgs.glibc nixpkgs.libstdcxx
+        $SUDO nix-env -iA nixpkgs.curl nixpkgs.python3 nixpkgs.python3Packages.pip nixpkgs.glibc nixpkgs.libstdcxx nixpkgs.unzip nixpkgs.gnutar
         ;;
     *)
         echo "Unsupported distribution: $OS"
