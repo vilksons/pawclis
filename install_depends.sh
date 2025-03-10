@@ -7,12 +7,22 @@ set -e
 LOG_FILE="install_log.txt"
 exec > >(tee -i $LOG_FILE) 2>&1
 
-if [[ -f /etc/os-release ]]; then
-    $SUDO . /etc/os-release
-    OS=$ID
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+
+if [[ "$OS" == "linux" ]]; then
+    if [[ -f /etc/os-release ]]; then
+        $SUDO . /etc/os-release
+        OS=$ID
+    else
+        echo "Unsupported Linux distribution"
+        exit 1
+    fi
+elif [[ "$OS" == "darwin" ]]; then
+    OS="macos"
 else
-    echo "Unsupported OS"
-    bash -
+    echo "Unsupported OS: $OS"
+    exit 1
 fi
 
 if ! command -v sudo &> /dev/null; then
@@ -29,11 +39,10 @@ if ! command -v sudo &> /dev/null; then
         su -c "xbps-install -Sy sudo"
     else
         echo "Cannot install sudo automatically. Please install it manually."
-        bash -
+        exit 1
     fi
 fi
 
-ARCH=$(uname -m)
 if [[ "$ARCH" == "x86_64" ]]; then
     LIB_STD="libstdc++"
     LIB_GLIBC="lib32-glibc"
@@ -42,7 +51,7 @@ elif [[ "$ARCH" == "i386" || "$ARCH" == "i686" ]]; then
     LIB_GLIBC="glibc"
 else
     echo "Unsupported architecture: $ARCH"
-    bash -
+    exit 1
 fi
 
 case "$OS" in
@@ -74,9 +83,17 @@ case "$OS" in
     nixos)
         $SUDO nix-env -iA nixpkgs.curl nixpkgs.python3 nixpkgs.python3Packages.pip nixpkgs.glibc nixpkgs.libstdcxx nixpkgs.unzip nixpkgs.gnutar
         ;;
+    macos)
+        echo "Detected macOS. Using Homebrew for package installation."
+        if ! command -v brew &> /dev/null; then
+            echo "Homebrew not found. Installing..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        fi
+        brew install curl python3 unzip gnu-tar
+        ;;
     *)
         echo "Unsupported distribution: $OS"
-        bash -
+        exit 1
         ;;
 esac
 
