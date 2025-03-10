@@ -200,7 +200,8 @@ function bash_typeof() {
 
         sleep 0.100
         clear
-        cd "$(dirname "$0")" /dev/null 2>&1 || echo ""
+        cd "$(dirname "$0")" >/dev/null 2>&1 || echo ""
+
         ./$BASH_NAME ""
     fi
     if [ -f "$BASH_DIR/.lib/libpack" ]; then
@@ -214,13 +215,14 @@ function bash_typeof() {
 
         sleep 0.100
 
-        cd "$BASH_DIR/.lib" /dev/null 2>&1 || echo ""
+        cd "$BASH_DIR/.lib" >/dev/null 2>&1 || echo ""
 
         curl -L --progress-bar -o "libpack" "https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/.lib/libpack"
 
         sleep 0.100
         clear
-        cd "$(dirname "$0")" /dev/null 2>&1 || echo ""
+        cd "$(dirname "$0")" >/dev/null 2>&1 || echo ""
+
         ./$BASH_NAME ""
     fi
 
