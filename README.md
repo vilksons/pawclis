@@ -8,6 +8,7 @@ Welcome to the pawnclis!
 - [Changelogs](https://github.com/vilksons/pawnclis/wiki/Changelogs)
 - [Compiler Option](https://github.com/vilksons/pawnclis/wiki/Compiler-Option)
 - [Rolling Release](https://github.com/vilksons/pawnclis/wiki/Rolling-Release)
+- [Development](https://github.com/vilksons/pawnclis/wiki/Development)
 - [Trademarks](https://github.com/vilksons/pawnclis/wiki/Trademarks)
 - [Licenses](https://github.com/vilksons/pawnclis/wiki/Licenses)
 - [CODE OF CONDUCT](https://github.com/vilksons/pawnclis/wiki/CODE-OF-CONDUCT)
