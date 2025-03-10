@@ -31,7 +31,7 @@ METADAT_FILE=".cache/compiler.log"
 _DIR1=$(awk -F'"' '/"ppm_dir"/ {print $4}' data.json)
 _DIR2=$(awk -F'"' '/"ppm_subdir"/ {print $4}' data.json)
 
-BASH_DIR="$(dirname "$0")"
+BASH_DIR="$(dirname "$(realpath "$0")")"
 BASH_TITLE=""
 BASH_NAME="pawnclis"
 BASH_BUILD="2025-03-10"
@@ -200,7 +200,7 @@ function bash_typeof() {
 
         sleep 0.100
         clear
-        cd "$(dirname "$0")" >/dev/null 2>&1 || echo ""
+        cd "$BASH_DIR" >/dev/null 2>&1 || echo ""
 
         ./$BASH_NAME ""
     fi
@@ -221,7 +221,7 @@ function bash_typeof() {
 
         sleep 0.100
         clear
-        cd "$(dirname "$0")" >/dev/null 2>&1 || echo ""
+        cd "$BASH_DIR" >/dev/null 2>&1 || echo ""
 
         ./$BASH_NAME ""
     fi
@@ -653,7 +653,7 @@ EOF
             curl -L --progress-bar -o "libpack" "https://raw.githubusercontent.com/vilksons/pawnclis/refs/heads/main/Scripts/.lib/libpack"
 
             sleep 1
-            cd "$(dirname "$0")" > /dev/null 2>&1 || echo ""
+            cd "$BASH_DIR" > /dev/null 2>&1 || echo ""
             curl -L --progress-bar -o "$BASH_NAME" "$URL_DOWNLOAD"
 
             sleep 1
