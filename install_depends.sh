@@ -1,6 +1,6 @@
 #!/bin/bash
 
-### What dependencies are installed? Please see: https://github.com/vilksons/pawnclis/wiki/Required-Library
+### What packages are installed? Please see: https://github.com/vilksons/pawnclis/wiki/Required-Packages
 
 set -e
 
