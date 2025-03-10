@@ -10,26 +10,26 @@ function send_samp_linux()
     if [[ "$SEL_C" =~ ^[Yy]$ ]]; then
         cd "$BASH_DIR" || bash_end ""
         echo "Select the SA-MP version to download:"
-        echo "[A/a] SA-MP 0.3.7 R2-1-1"
+        echo "[A/a] SA-MP 0.3.DL R1"
         echo "[B/b] SA-MP 0.3.7 R3"
-        echo "[C/c] SA-MP 0.3.DL R1"
+        echo "[C/c] SA-MP 0.3.7 R2-1-1"
         read -r -p ">> " VERSION_NEED
         
         while true; do
             case "$VERSION_NEED" in
                 [Aa])
+                    DOWNLOAD_URL_CURL="https://sa-mp.co.id/files/samp03DLsvr_R1.tar.gz"
+                    DOWNLOAD_FILE_CURL="samp03DLsvr_R1.tar.gz"
+                    break
+                    ;;
+                [Bb])
                     DOWNLOAD_URL_CURL="https://files.sa-mp.app/samp037svr_R2-2-1.tar.gz"
                     DOWNLOAD_FILE_CURL="samp037svr_R2-2-1.tar.gz"
                     break
                     ;;
-                [Bb])
-                    DOWNLOAD_URL_CURL="https://files.sa-mp.app/samp037svr_R3.tar.gz"
-                    DOWNLOAD_FILE_CURL="samp037svr_R3.tar.gz"
-                    break
-                    ;;
                 [Cc])
-                    DOWNLOAD_URL_CURL="https://sa-mp.co.id/files/samp03DLsvr_R1.tar.gz"
-                    DOWNLOAD_FILE_CURL="samp03DLsvr_R1.tar.gz"
+                    DOWNLOAD_URL_CURL="https://files.sa-mp.app/samp037svr_R2-2-1.tar.gz"
+                    DOWNLOAD_FILE_CURL="samp037svr_R2-2-1.tar.gz"
                     break
                     ;;
                 *)
