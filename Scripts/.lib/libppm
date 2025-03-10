@@ -110,7 +110,7 @@ EOF
                     elif [[ "$PPM_REPOSITORY_URL" == *"sourceforge.net"* ]]; then
                         PPM_API_URL="https://sourceforge.net/projects/$PPM_REPO_NAME/files/latest/download"
                     else
-                        echo "Unsupported repository host $PPM_REPOSITORY_URL -> only github/gitlab/sourceforge"
+                        echo "error: Unsupported repository host $PPM_REPOSITORY_URL -> only github/gitlab/sourceforge"
                         bash_typeof2 ""
                     fi
                 
@@ -125,7 +125,7 @@ EOF
                     elif [[ "$PPM_REPOSITORY_URL" == *"sourceforge.net"* ]]; then
                         PPM_ARCHIVE_URL="https://sourceforge.net/projects/$PPM_REPO_NAME/files/latest/download"
                     else
-                        echo "Unsupported repository host $PPM_REPOSITORY_URL -> only github/gitlab/sourceforge"
+                        echo "error: Unsupported repository host $PPM_REPOSITORY_URL -> only github/gitlab/sourceforge"
                         bash_typeof2 ""
                     fi
                 
